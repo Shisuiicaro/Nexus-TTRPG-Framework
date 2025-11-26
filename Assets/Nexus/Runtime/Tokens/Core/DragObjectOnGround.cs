@@ -22,6 +22,7 @@ public class DragObjectOnGround : MonoBehaviour
 
     private Vector3 offset;
     private Camera mainCamera;
+    private Camera playerCamera;
     private float lastGroundY;
     private bool hasGroundY = false;
     private TokenSetup tokenSetup;
@@ -35,9 +36,18 @@ public class DragObjectOnGround : MonoBehaviour
     void Start()
     {
         tokenSetup = GetComponent<TokenSetup>();
-        mainCamera = FindLocalPlayerCamera();
-        if (mainCamera == null) mainCamera = Camera.main;
+        if (Nexus.CameraManager.Instance != null)
+            playerCamera = Nexus.CameraManager.Instance.MainCamera;
+        if (playerCamera == null) playerCamera = Camera.main; // Fallback if CameraManager not available or camera not set
         netToken = GetComponent<NetworkedToken>();
+    }
+
+    private void Update()
+    {
+        if (Nexus.CameraManager.Instance != null)
+            playerCamera = Nexus.CameraManager.Instance.MainCamera;
+
+        if (playerCamera == null) playerCamera = Camera.main; // Fallback if CameraManager not available or camera not set
     }
 
     void OnMouseDown()
@@ -164,25 +174,5 @@ public class DragObjectOnGround : MonoBehaviour
             netToken.SetLocalDragOwner(false);
         }
         dragPlaneActive = false;
-    }
-
-    private Camera FindLocalPlayerCamera()
-    {
-        Camera[] cameras = Object.FindObjectsOfType<Camera>();
-        foreach (Camera cam in cameras)
-        {
-            if (!cam.enabled || !cam.gameObject.activeInHierarchy) continue;
-            var networkPlayer = cam.GetComponentInParent<Nexus.Networking.NetworkPlayer>();
-            if (networkPlayer != null && networkPlayer.isLocalPlayer)
-            {
-                return cam;
-            }
-        }
-        foreach (Camera cam in cameras)
-        {
-            if (!cam.enabled || !cam.gameObject.activeInHierarchy) continue;
-            if (cam.CompareTag("MainCamera")) return cam;
-        }
-        return Camera.main;
     }
 }

@@ -54,8 +54,8 @@ namespace Nexus
 
         private void Start()
         {
-            if (mainCamera == null)
-                FindLocalPlayerCamera();
+            if (mainCamera == null && Nexus.CameraManager.Instance != null)
+                mainCamera = Nexus.CameraManager.Instance.MainCamera;
         }
 
         private Nexus.Networking.NetworkPlayer boundLocalPlayer;
@@ -63,12 +63,20 @@ namespace Nexus
 
         private void Update()
         {
-            // Find local player camera if not found yet (for multiplayer)
-            if (mainCamera == null || !IsLocalPlayerCamera(mainCamera))
+            // Always ensure we have the correct camera from CameraManager
+            if (Nexus.CameraManager.Instance != null)
             {
-                FindLocalPlayerCamera();
+                mainCamera = Nexus.CameraManager.Instance.MainCamera;
             }
-            return;
+            
+            if (mainCamera == null) return;
+
+            HandleSelection();
+            HandleObjectManipulation();
+            if (isDragging) MoveSelectedObject();
+            HandleUndo();
+            HandleCopyPaste();
+            HandleDelete();
         }
 
 
@@ -465,59 +473,7 @@ namespace Nexus
             dragHeightOffset = 0f;
         }
 
-        /// <summary>
-        /// Finds the local player's camera for multiplayer support
-        /// Each player will interact with objects using their own camera
-        /// </summary>
-        private void FindLocalPlayerCamera()
-        {
-            if (boundLocalPlayer != null)
-            {
-                var cam = boundLocalPlayer.GetComponentInChildren<Camera>(true);
-                if (cam != null && cam.enabled && cam.gameObject.activeInHierarchy)
-                {
-                    mainCamera = cam;
-                    return;
-                }
-            }
-            Camera[] cameras = Object.FindObjectsOfType<Camera>();
-            
-            // First pass: strictly prefer the local player's camera
-            foreach (Camera cam in cameras)
-            {
-                if (!cam.enabled || !cam.gameObject.activeInHierarchy) continue;
-                var networkPlayer = cam.GetComponentInParent<Nexus.Networking.NetworkPlayer>();
-                if (networkPlayer != null && networkPlayer.isLocalPlayer)
-                {
-                    mainCamera = cam;
-                    return;
-                }
-            }
-            
-            // Second pass: fallback to any enabled MainCamera
-            foreach (Camera cam in cameras)
-            {
-                if (!cam.enabled || !cam.gameObject.activeInHierarchy) continue;
-                if (cam.CompareTag("MainCamera"))
-                {
-                    mainCamera = cam;
-                    return;
-                }
-            }
-            
-            // Final fallback: Camera.main
-            if (mainCamera == null)
-            {
-                mainCamera = Camera.main;
-            }
-        }
 
-        private bool IsLocalPlayerCamera(Camera cam)
-        {
-            if (cam == null) return false;
-            var networkPlayer = cam.GetComponentInParent<Nexus.Networking.NetworkPlayer>();
-            return networkPlayer != null && networkPlayer.isLocalPlayer;
-        }
 
         private Nexus.Networking.NetworkPlayer FindLocalNetworkPlayer()
         {

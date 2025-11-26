@@ -31,11 +31,9 @@ namespace Nexus
         [SerializeField] private bool showDebugWarnings = false;
         
         // Cache
-        private static GameObject cachedPlayerCamera; // Estático = compartilhado entre todas as 146 luzes
         private Light _light;
         private int frameCounter;
         private float randomOffset;
-        private static bool cameraSearchPerformed = false;
 
         private void Awake()
         {
@@ -48,12 +46,7 @@ namespace Nexus
 
         private void Start()
         {
-            // Tenta encontrar a câmera uma vez (compartilhada entre todas as luzes)
-            if (cachedPlayerCamera == null && !cameraSearchPerformed)
-            {
-                FindPlayerCamera();
-                cameraSearchPerformed = true;
-            }
+            // No initialization needed for camera
         }
 
         private void Update()
@@ -65,21 +58,21 @@ namespace Nexus
             
             frameCounter = 0;
             
-            // Se a câmera foi destruída ou ainda não foi encontrada, tenta novamente
-            if (cachedPlayerCamera == null)
+            GameObject targetCam = null;
+            if (Nexus.CameraManager.Instance != null && Nexus.CameraManager.Instance.MainCamera != null)
             {
-                FindPlayerCamera();
-                
-                // Se ainda não encontrou, desabilita a luz e retorna
-                if (cachedPlayerCamera == null)
-                {
-                    _light.enabled = false;
-                    return;
-                }
+                targetCam = Nexus.CameraManager.Instance.MainCamera.gameObject;
+            }
+            
+            // Se a câmera não foi encontrada, desabilita a luz e retorna
+            if (targetCam == null)
+            {
+                _light.enabled = false;
+                return;
             }
 
             // Calcula a distância entre a câmera e a luz
-            float cameraDistance = Vector3.Distance(cachedPlayerCamera.transform.position, transform.position);
+            float cameraDistance = Vector3.Distance(targetCam.transform.position, transform.position);
 
             // Gerenciamento de sombras
             if (cameraDistance <= shadowCullingDistance && enableShadows)
@@ -102,86 +95,6 @@ namespace Nexus
             }
         }
 
-        /// <summary>
-        /// Encontra a câmera do jogador automaticamente usando múltiplos métodos
-        /// </summary>
-        private void FindPlayerCamera()
-        {
-            // Método 1: Busca por nome exato (mais específico)
-            if (!string.IsNullOrEmpty(cameraName))
-            {
-                GameObject foundByName = GameObject.Find(cameraName);
-                if (foundByName != null)
-                {
-                    cachedPlayerCamera = foundByName;
-                    if (showDebugWarnings)
-                        Debug.Log($"[LightCulling] Câmera encontrada por nome: {cameraName}");
-                    return;
-                }
-            }
-
-            // Método 2: Busca por tag
-            if (!string.IsNullOrEmpty(cameraTag))
-            {
-                GameObject foundByTag = GameObject.FindGameObjectWithTag(cameraTag);
-                if (foundByTag != null)
-                {
-                    cachedPlayerCamera = foundByTag;
-                    if (showDebugWarnings)
-                        Debug.Log($"[LightCulling] Câmera encontrada por tag: {cameraTag}");
-                    return;
-                }
-            }
-
-            // Método 3: Usa Camera.main (câmera marcada como MainCamera)
-            Camera mainCam = Camera.main;
-            if (mainCam != null)
-            {
-                cachedPlayerCamera = mainCam.gameObject;
-                if (showDebugWarnings)
-                    Debug.Log($"[LightCulling] Câmera encontrada via Camera.main: {mainCam.name}");
-                return;
-            }
-
-            // Método 4: Procura qualquer câmera ativa (último recurso)
-            Camera anyCam = FindObjectOfType<Camera>();
-            if (anyCam != null)
-            {
-                cachedPlayerCamera = anyCam.gameObject;
-                if (showDebugWarnings)
-                    Debug.Log($"[LightCulling] Câmera encontrada via FindObjectOfType: {anyCam.name}");
-                return;
-            }
-
-            // Se chegou aqui, não encontrou nenhuma câmera
-            if (showDebugWarnings)
-            {
-                Debug.LogWarning($"[LightCulling] Nenhuma câmera encontrada! Verifique se:\n" +
-                                 $"- Existe uma câmera com o nome '{cameraName}'\n" +
-                                 $"- Ou uma câmera com a tag '{cameraTag}'\n" +
-                                 $"- Ou uma Camera.main na cena");
-            }
-        }
-
-        /// <summary>
-        /// Reseta o cache da câmera. Útil quando trocar de cena.
-        /// Chame este método estático quando carregar uma nova SubScene.
-        /// </summary>
-        public static void ResetCameraCache()
-        {
-            cachedPlayerCamera = null;
-            cameraSearchPerformed = false;
-        }
-
-        /// <summary>
-        /// Define manualmente a câmera (útil para casos específicos)
-        /// </summary>
-        public static void SetPlayerCamera(GameObject camera)
-        {
-            cachedPlayerCamera = camera;
-            cameraSearchPerformed = true;
-        }
-
         // Opcional: Desenha gizmos no editor para visualizar as distâncias
         private void OnDrawGizmosSelected()
         {
@@ -193,5 +106,9 @@ namespace Nexus
             Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
             Gizmos.DrawWireSphere(transform.position, lightCullingDistance);
         }
+        
+        // Legacy methods removed or deprecated
+        public static void SetPlayerCamera(GameObject camera) { }
+        public static void ResetCameraCache() { }
     }
 }

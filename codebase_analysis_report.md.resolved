@@ -1,0 +1,98 @@
+# Nexus-TTRPG-Framework Codebase Analysis
+
+## 1. Executive Summary
+The project is a Unity-based TTRPG framework using Mirror for networking. It features a hybrid "Tabletop" (RTS-style) and "Free Fly" camera system, with support for token spawning, movement, and state synchronization.
+
+**Overall Status:**
+- **Functional but Fragile:** The core features work but rely on "magic" (runtime component addition, reflection) and heavy polling (`FindObjectsOfType`).
+- **Performance Risks:** Frequent expensive calls in [Update](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Camera/CameraTokenPicker.cs#22-52) loops and inefficient resource loading will scale poorly.
+- **High Duplication:** Critical logic (finding the local player camera, network smoothing) is copy-pasted across many files.
+- **God Classes:** A few massive classes handle too many responsibilities, making maintenance difficult.
+
+## 2. Critical Issues (High Priority)
+
+### 2.1. Performance Killers
+- **`FindObjectsOfType` in Hot Paths:**
+  - `MultiplayerUI.Update()` calls `FindObjectOfType<PlayerController>()` and `FindObjectOfType<TabletopManager>()` **every frame** until found.
+  - `TenkokuCameraBinder.FindBestLocalCamera()` calls `FindObjectsOfType` for [NetworkPlayer](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkPlayer.cs#12-289) and [Camera](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/TokenSetup.cs#63-64) repeatedly.
+  - [LightCulling](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Rendering/LightCulling.cs#8-197) searches for cameras if cached reference is lost.
+- **Resource Loading:**
+  - [GameNetworkManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/GameNetworkManager.cs#12-292) loads **all** assets in `Resources/Tokens` to register prefabs. As the library grows, this will cause massive lag spikes on server start/join.
+
+### 2.2. Code Duplication
+- **Camera Finding Logic:**
+  - `TabletopManager.FindLocalPlayerCamera`
+  - `NetworkedToken.FindLocalPlayerCamera`
+  - `DragObjectOnGround.FindLocalPlayerCamera`
+  - `TenkokuCameraBinder.FindBestLocalCamera`
+  - `LightCulling.FindPlayerCamera`
+  *All these implement slightly different variations of "Find the local player's camera".*
+- **Snapshot Interpolation:**
+  - [NetworkedToken](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedToken.cs#11-484) and [NetworkedMovable](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedMovable.cs#7-243) both implement custom snapshot interpolation logic (struct [Snapshot](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedMovable.cs#163-169), [ApplySnapshotInterpolation](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedToken.cs#403-433)). This should be a shared component or use Mirror's `NetworkTransform`.
+
+### 2.3. Fragile Architecture
+- **Reflection Abuse:**
+  - [NetworkPlayer](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkPlayer.cs#12-289) uses `System.Type.GetType(...)` to access URP camera data. This will break if URP namespaces change (which they often do).
+  - [CameraRigController](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Camera/CameraRigController.cs#5-271) uses reflection to set Cinemachine FOV.
+  - [SceneManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/SceneManagement/SceneManager.cs#10-241) uses reflection to call `LightCulling.ResetCameraCache`.
+- **Runtime Component "Magic":**
+  - [NetworkSpawner](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkSpawner.cs#10-234) adds [DragObjectOnGround](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/DragObjectOnGround.cs#5-189), [NetworkedToken](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedToken.cs#11-484), and [NetworkedMovable](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedMovable.cs#7-243) to instantiated objects at runtime if missing. This hides dependencies and makes prefabs harder to debug (what you see in Editor is not what you get in Game).
+
+## 3. Detailed Findings by Category
+
+### 3.1. Unused or Questionable Assets
+- **[NullNetworkAddressResolver.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/AddressResolvers/NullNetworkAddressResolver.cs)**: Likely a placeholder. If not used in the inspector as a default, it can be removed.
+- **[SimpleDownforce.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Physics/SimpleDownforce.cs)**: Common "Standard Assets" script. Verify if vehicles or physics objects actually need this.
+- **[GravityGuard.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Physics/GravityGuard.cs)**: Likely a safety script to catch falling objects. If the map is closed, this might be unnecessary overhead.
+- **`Lens` Reflection Fields in [CameraRigController](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Camera/CameraRigController.cs#5-271)**: If `CinemachineVirtualCamera` exposes `m_Lens.FieldOfView` publically (it does), the reflection fields are dead code.
+
+### 3.2. Anti-Patterns & Bad Practices
+- **God Classes:**
+  - **[TabletopManager.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tabletop/Core/TabletopManager.cs)**: Handles input, selection, movement, rotation, undo/redo, copy/paste, and network spawning.
+  - **[TokenSetup.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/TokenSetup.cs)**: Handles physics, scale, sprites, billboarding, squash effects, ground snapping, and input state.
+  - **[NetworkPlayer.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkPlayer.cs)**: Handles camera setup, sky binding, UI binding, and token commands.
+- **Singleton Abuse:**
+  - [GameNetworkManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/GameNetworkManager.cs#12-292), [NetworkSpawner](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkSpawner.cs#10-234), [RoomCodeManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/Services/RoomCodeManager.cs#11-91), [RoomCodeRelay](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/Services/RoomCodeRelay.cs#15-205), [SceneManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/SceneManagement/SceneManager.cs#10-241). While common in Unity, too many singletons make testing and scene transitions fragile.
+- **Hardcoded Inputs:**
+  - [TokenSetup](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/TokenSetup.cs#3-835) checks `KeyCode.Alpha1` through `Alpha6` and `Plus`/`Minus` directly in [Update](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Camera/CameraTokenPicker.cs#22-52). This makes remapping keys impossible.
+  - [SceneManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/SceneManagement/SceneManager.cs#10-241) uses hardcoded `N`, `P`, `R` keys.
+
+### 3.3. Logic & Structure Improvements
+- **`NetworkSpawner.SpawnObjectInternal`**: The ground snapping logic (raycasts/boxcasts) is complex and buried inside the spawner. This should be a static utility or part of a `PlacementSystem`.
+- **[TokenLibraryManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/TokenLibraryManager.cs#13-190)**: Manually parses string paths to determine categories. This is brittle. Using `ScriptableObjects` to define categories would be more robust.
+
+## 4. Recommendations
+
+### 4.1. Immediate Refactoring (Cleanliness)
+1.  **Centralize Camera Access:** Create a `CameraManager` or `PlayerSession` singleton that holds the reference to the current local camera. All other scripts ([LightCulling](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Rendering/LightCulling.cs#8-197), `TenkokuBinder`, [TabletopManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tabletop/Core/TabletopManager.cs#7-562)) should query this single source.
+2.  **Remove Reflection:**
+    - Replace [CameraRigController](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Camera/CameraRigController.cs#5-271) reflection with direct access to `CinemachineVirtualCamera.m_Lens`.
+    - Replace [NetworkPlayer](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkPlayer.cs#12-289) URP reflection with a proper assembly definition reference to `Unity.RenderPipelines.Universal.Runtime` or remove if unnecessary.
+3.  **Fix Input:** Replace hardcoded `Input.GetKeyDown` with a simple `InputManager` or Unity's Input System.
+
+### 4.2. Architecture Improvements
+1.  **Extract Logic from God Classes:**
+    - Split [TabletopManager](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tabletop/Core/TabletopManager.cs#7-562) into `InteractionController` (input/selection), `ManipulationSystem` (move/rotate), and `ClipboardSystem` (copy/paste).
+    - Split [TokenSetup](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/TokenSetup.cs#3-835) into `TokenVisuals` (sprites/squash) and `TokenPhysics` (snapping/rigidbody).
+2.  **Standardize Networking:**
+    - Replace custom snapshot interpolation in [NetworkedToken](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedToken.cs#11-484) and [NetworkedMovable](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedMovable.cs#7-243) with Mirror's `NetworkTransform` (Reliable or Unreliable) or a single shared `NetworkSmoother` component.
+3.  **Explicit Prefab Dependencies:**
+    - Stop adding components at runtime in [NetworkSpawner](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkSpawner.cs#10-234). Add [DragObjectOnGround](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/DragObjectOnGround.cs#5-189) and [NetworkedToken](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkedToken.cs#11-484) to the prefabs directly in the Editor. This makes the requirements explicit.
+
+### 4.3. Folder Structure
+The current structure is decent but could be cleaner:
+- `Runtime/Tokens/Core` -> `Runtime/Tokens`
+- `Runtime/Networking/Services` -> `Runtime/Networking/RoomManagement`
+- `Runtime/Integrations` -> Keep, but ensure third-party dependencies (Tenkoku) are isolated.
+
+## 5. File-Specific Action Items
+
+| File | Action | Reason |
+| :--- | :--- | :--- |
+| [TabletopManager.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tabletop/Core/TabletopManager.cs) | **Refactor** | Split into `SelectionManager` and `ObjectManipulator`. |
+| [TokenSetup.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Tokens/Core/TokenSetup.cs) | **Refactor** | Extract Input and Physics logic. |
+| [NetworkPlayer.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkPlayer.cs) | **Clean** | Remove URP reflection; use direct references. |
+| [MultiplayerUI.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/UI/MultiplayerUI.cs) | **Optimize** | Cache [PlayerController](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Player/PlayerController.cs#13-369) reference; stop searching in [Update](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Camera/CameraTokenPicker.cs#22-52). |
+| [LightCulling.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Rendering/LightCulling.cs) | **Optimize** | Use the centralized Camera reference. |
+| [CameraRigController.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Camera/CameraRigController.cs) | **Clean** | Remove reflection for Cinemachine. |
+| [NetworkSpawner.cs](file:///home/shisuys/Documentos/GitHub/Nexus-TTRPG-Framework/Assets/Nexus/Runtime/Networking/NetworkSpawner.cs) | **Simplify** | Remove runtime `AddComponent` calls. |

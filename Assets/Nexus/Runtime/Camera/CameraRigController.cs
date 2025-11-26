@@ -1,6 +1,6 @@
 using System;
-using System.Reflection;
 using UnityEngine;
+using Cinemachine;
 
 public class CameraRigController : MonoBehaviour
 {
@@ -47,10 +47,7 @@ public class CameraRigController : MonoBehaviour
     float overrideTargetFOV;
     AnimationCurve overrideCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
-    Component cachedVcam;
-    FieldInfo lensField;
-    FieldInfo lensFovField;
-    PropertyInfo lensFovProp;
+    CinemachineVirtualCamera vcam;
 
     void Awake()
     {
@@ -130,30 +127,11 @@ public class CameraRigController : MonoBehaviour
 
     void ApplyFOV(float fov)
     {
-        if (cachedVcam && lensField != null)
+        if (vcam != null)
         {
-            var lens = lensField.GetValue(cachedVcam);
-            if (lens != null)
-            {
-                var lt = lens.GetType();
-                bool set = false;
-                if (lensFovField == null) lensFovField = lt.GetField("FieldOfView", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (lensFovField != null)
-                {
-                    lensFovField.SetValue(lens, fov);
-                    set = true;
-                }
-                else
-                {
-                    if (lensFovProp == null) lensFovProp = lt.GetProperty("FieldOfView", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (lensFovProp != null && lensFovProp.CanWrite)
-                    {
-                        lensFovProp.SetValue(lens, fov, null);
-                        set = true;
-                    }
-                }
-                if (set) lensField.SetValue(cachedVcam, lens);
-            }
+            var lens = vcam.m_Lens;
+            lens.FieldOfView = fov;
+            vcam.m_Lens = lens;
         }
         else if (targetCamera)
         {
@@ -163,22 +141,12 @@ public class CameraRigController : MonoBehaviour
 
     void TryCacheVcam()
     {
-        cachedVcam = null;
-        lensField = null;
-        lensFovField = null;
-        lensFovProp = null;
+        vcam = null;
         if (!gameplayVCam) return;
-        var comps = gameplayVCam.GetComponents<Component>();
-        foreach (var c in comps)
+        vcam = gameplayVCam.GetComponent<CinemachineVirtualCamera>();
+        if (vcam == null)
         {
-            if (c == null) continue;
-            var n = c.GetType().Name;
-            if (n == "CinemachineVirtualCamera")
-            {
-                cachedVcam = c;
-                lensField = c.GetType().GetField("m_Lens", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                break;
-            }
+            vcam = gameplayVCam.GetComponentInChildren<CinemachineVirtualCamera>(true);
         }
     }
 
@@ -196,16 +164,8 @@ public class CameraRigController : MonoBehaviour
         }
         if (!gameplayVCam)
         {
-            var comps = GetComponentsInChildren<Component>(true);
-            foreach (var c in comps)
-            {
-                if (c == null) continue;
-                if (c.GetType().Name == "CinemachineVirtualCamera")
-                {
-                    gameplayVCam = c.gameObject;
-                    break;
-                }
-            }
+            var c = GetComponentInChildren<CinemachineVirtualCamera>(true);
+            if (c) gameplayVCam = c.gameObject;
         }
     }
 

@@ -208,13 +208,7 @@ public class SceneManager : MonoBehaviour
     
     private void ResetLightCullingCache()
     {
-        var type = System.Type.GetType("Nexus.LightCulling");
-        if (type != null)
-        {
-            var method = type.GetMethod("ResetCameraCache", 
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            method?.Invoke(null, null);
-        }
+        Nexus.LightCulling.ResetCameraCache();
     }
     
     private void Log(string message)

@@ -59,8 +59,7 @@ public class TokenSetup : MonoBehaviour
     private Rigidbody rb;
     private BoxCollider boxCollider;
     private Camera mainCamera;
-    private static Camera globalCameraRef;
-    public static void SetGlobalCamera(Camera cam) { globalCameraRef = cam; }
+
     private Transform spriteTransform;
     private SpriteRenderer spriteRenderer;
     private Material spriteMaterial;
@@ -75,6 +74,9 @@ public class TokenSetup : MonoBehaviour
     // State tracking
     private int currentState = 1;
     private bool isCenterScreenOver = false;
+    private Camera playerCamera;
+    private float squashOffset;
+    private Vector3 targetScale;
     
     private void Awake()
     {
@@ -99,13 +101,13 @@ public class TokenSetup : MonoBehaviour
     
     private void Start()
     {
-        if (globalCameraRef != null)
+        if (Nexus.CameraManager.Instance != null)
         {
-            mainCamera = globalCameraRef;
+            mainCamera = Nexus.CameraManager.Instance.MainCamera;
         }
         else
         {
-            FindLocalPlayerCamera();
+            if (Camera.main != null) mainCamera = Camera.main;
         }
         
         // Store default sprite if not assigned
@@ -129,10 +131,10 @@ public class TokenSetup : MonoBehaviour
         // Find local player camera if not found yet (for multiplayer)
         if (mainCamera == null)
         {
-            if (globalCameraRef != null)
-                mainCamera = globalCameraRef;
-            else
-                FindLocalPlayerCamera();
+            if (Nexus.CameraManager.Instance != null)
+                mainCamera = Nexus.CameraManager.Instance.MainCamera;
+            else if (Camera.main != null)
+                mainCamera = Camera.main;
         }
         
         // Only raycast to check focus when relevant keys are pressed
