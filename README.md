@@ -37,6 +37,7 @@ Framework modular para mesas virtuais (VTT) no Unity. Crie cenas, tokens e exper
 - [ ] Cinematics em tempo real com cinemachine
 - [ ] Camera que segue um token marcado
 - [ ] Transição entre multiplas cameras e modos
+- [ ] Prefab Token States
 
 
 ## Contribuindo
