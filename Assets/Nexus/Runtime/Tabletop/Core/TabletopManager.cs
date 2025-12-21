@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Mirror;
+ using UnityEngine.EventSystems;
 
 namespace Nexus
 {
@@ -103,6 +104,9 @@ namespace Nexus
         private bool wasKinematic;
         private bool hadGravity;
         public bool InputLocked { get; set; } = false;
+        [SerializeField] private KeyCode selectAnyModifier = KeyCode.LeftAlt;
+        [SerializeField] private KeyCode selectAnyOnceKey = KeyCode.G;
+        private bool selectAnyArmed = false;
 
         private Stack<UndoAction> undoStack = new();
         private GameObject copiedObject;
@@ -125,6 +129,10 @@ namespace Nexus
                     mainCamera = Nexus.CameraManager.Instance.MainCamera;
                 else if (Camera.main != null)
                     mainCamera = Camera.main;
+            }
+            if (RuntimeTransformGizmo.Instance == null)
+            {
+                new GameObject("RuntimeTransformGizmo").AddComponent<RuntimeTransformGizmo>();
             }
         }
 
@@ -219,8 +227,18 @@ namespace Nexus
         // ===============================
         private void HandleSelection()
         {
+            if (Input.GetKeyDown(selectAnyOnceKey))
+            {
+                selectAnyArmed = true;
+            }
             if (Input.GetMouseButtonDown(0))
             {
+                if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+                {
+                    return;
+                }
+                bool allowAny = selectAnyArmed || Input.GetKey(selectAnyModifier);
+                if (selectAnyArmed) selectAnyArmed = false;
                 Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
                 RaycastHit[] hits = Physics.RaycastAll(ray, 500f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
                 System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
@@ -229,19 +247,28 @@ namespace Nexus
                 bool bestIsMovable = false;
                 RaycastHit bestHit = new RaycastHit();
 
-                // Prefer tokens first
-                for (int i = 0; i < hits.Length && bestTarget == null; i++)
+                if (!allowAny)
                 {
-                    var tokenSetup = hits[i].transform.GetComponentInParent<TokenSetup>();
-                    if (tokenSetup != null)
+                    for (int i = 0; i < hits.Length && bestTarget == null; i++)
                     {
-                        bestTarget = tokenSetup.transform;
-                        bestIsToken = true;
-                        bestHit = hits[i];
-                        break;
+                        var tokenSetup = hits[i].transform.GetComponentInParent<TokenSetup>();
+                        if (tokenSetup != null)
+                        {
+                            bestTarget = tokenSetup.transform;
+                            bestIsToken = true;
+                            bestHit = hits[i];
+                            break;
+                        }
                     }
                 }
-                // Tokens only: do not select generic Movables
+                else
+                {
+                    if (hits.Length > 0)
+                    {
+                        bestTarget = hits[0].transform;
+                        bestHit = hits[0];
+                    }
+                }
 
                 if (bestTarget != null)
                 {
@@ -461,6 +488,14 @@ namespace Nexus
             Rigidbody rb = root.GetComponentInChildren<Rigidbody>();
             selectedRigidbody = (rb != null && (rb.transform == root || rb.transform.IsChildOf(root))) ? rb : null;
             targetRotation = root.rotation;
+            if (RuntimeTransformGizmo.Instance == null)
+            {
+                new GameObject("RuntimeTransformGizmo").AddComponent<RuntimeTransformGizmo>();
+            }
+            if (RuntimeTransformGizmo.Instance != null)
+            {
+                RuntimeTransformGizmo.Instance.SetTarget(selectedObject);
+            }
         }
 
         private void Deselect()
@@ -472,6 +507,10 @@ namespace Nexus
             selectedRigidbody = null;
             isDragging = false;
             isLocked = false;
+            if (RuntimeTransformGizmo.Instance != null)
+            {
+                RuntimeTransformGizmo.Instance.SetTarget(null);
+            }
         }
 
         private void SaveStateAndStartDragging(RaycastHit hit)
