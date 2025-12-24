@@ -1,0 +1,95 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="MainMenu.uss" />
+    <ui:VisualElement name="Container" class="main-container">
+
+        <ui:VisualElement name="BackgroundContainer" class="background-container">
+            
+
+            <ui:VisualElement name="Sky" class="layer sky" />
+
+
+            <ui:VisualElement name="Rocks" class="layer rocks" />
+
+
+            <ui:VisualElement name="ParticlesLayer" class="layer particles-layer" />
+
+
+            <ui:VisualElement name="PortalCliff" class="layer portal-cliff" />
+
+
+            <ui:VisualElement name="PortalDebris" class="layer portal-debris" />
+
+
+            <ui:VisualElement name="Debris" class="layer debris" />
+            
+
+            <ui:VisualElement name="BackgroundOverlay" class="background-overlay" />
+            
+        </ui:VisualElement>
+
+
+        <ui:VisualElement name="LogoSection" class="logo-section">
+            <ui:Image name="Logo" class="logo" />
+            <ui:Label text="NEXUS" name="ProjectTitle" class="project-title" />
+            <ui:Label text="TABLETOP" name="ProjectSubtitle" class="project-subtitle" />
+        </ui:VisualElement>
+
+
+        <ui:VisualElement name="MainMenu" class="main-menu">
+            <ui:Button name="SoloBtn" class="menu-btn">
+                <Nexus.UI.Custom.ChamferedBox class="btn-bg" chamfer-size="10" border-width="1" />
+                <ui:VisualElement class="btn-accent" />
+                <ui:Label text="SOLO" class="btn-text" />
+                <ui:VisualElement class="btn-decoration">
+                    <Nexus.UI.Effects.CircleGlow class="dot-glow" glow-color="#06b6d4" />
+                    <ui:VisualElement class="dot-core" />
+                </ui:VisualElement>
+            </ui:Button>
+            <ui:Button name="MultiplayerBtn" class="menu-btn">
+                <Nexus.UI.Custom.ChamferedBox class="btn-bg" chamfer-size="10" border-width="1" />
+                <ui:VisualElement class="btn-accent" />
+                <ui:Label text="MULTIPLAYER" class="btn-text" />
+                <ui:VisualElement class="btn-decoration">
+                    <Nexus.UI.Effects.CircleGlow class="dot-glow" glow-color="#06b6d4" />
+                    <ui:VisualElement class="dot-core" />
+                </ui:VisualElement>
+            </ui:Button>
+            <ui:Button name="ConfigBtn" class="menu-btn">
+                <Nexus.UI.Custom.ChamferedBox class="btn-bg" chamfer-size="10" border-width="1" />
+                <ui:VisualElement class="btn-accent" />
+                <ui:Label text="CONFIG" class="btn-text" />
+                <ui:VisualElement class="btn-decoration">
+                    <Nexus.UI.Effects.CircleGlow class="dot-glow" glow-color="#06b6d4" />
+                    <ui:VisualElement class="dot-core" />
+                </ui:VisualElement>
+            </ui:Button>
+            <ui:Button name="CreditsBtn" class="menu-btn">
+                <Nexus.UI.Custom.ChamferedBox class="btn-bg" chamfer-size="10" border-width="1" />
+                <ui:VisualElement class="btn-accent" />
+                <ui:Label text="CREDITS" class="btn-text" />
+                <ui:VisualElement class="btn-decoration">
+                    <Nexus.UI.Effects.CircleGlow class="dot-glow" glow-color="#06b6d4" />
+                    <ui:VisualElement class="dot-core" />
+                </ui:VisualElement>
+            </ui:Button>
+            <ui:Button name="QuitBtn" class="menu-btn quit-btn">
+                <Nexus.UI.Custom.ChamferedBox class="btn-bg" chamfer-size="10" border-width="1" />
+                <ui:VisualElement class="btn-accent quit-accent" />
+                <ui:Label text="QUIT" class="btn-text" />
+                <ui:VisualElement class="btn-decoration">
+                    <Nexus.UI.Effects.CircleGlow class="dot-glow" glow-color="#ef4444" />
+                    <ui:VisualElement class="dot-core" />
+                </ui:VisualElement>
+            </ui:Button>
+        </ui:VisualElement>
+
+
+        <ui:VisualElement name="Footer" class="footer-section">
+            <ui:Label text="v0.1.0-alpha" display-tooltip-when-elided="true" class="version-info" />
+            <ui:VisualElement class="social-links">
+                <ui:Button text="DISCORD" class="social-link" />
+                <ui:Button text="TWITTER" class="social-link" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

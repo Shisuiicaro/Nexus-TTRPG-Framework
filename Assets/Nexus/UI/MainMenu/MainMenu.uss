@@ -1,0 +1,299 @@
+
+:root {
+    --primary-color: #6d28d9;
+    --accent-color: #06b6d4;
+    --text-color: #ffffff;
+    --text-muted: #94a3b8;
+    --glass-bg: rgba(15, 23, 42, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --font-size-xl: 52px;
+    --font-size-lg: 24px;
+    --font-size-md: 18px;
+    --font-size-sm: 14px;
+    --font-main: url("../Fonts/Outfit/Outfit-Medium.ttf");
+    --font-bold: url("../Fonts/Outfit/Outfit-Bold.ttf");
+    --font-light: url("../Fonts/Outfit/Outfit-Regular.ttf");
+}
+
+.btn-text, .version-info, .social-link {
+    -unity-font-definition: var(--font-main);
+}
+
+
+.main-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 32px;
+    justify-content: space-between;
+}
+
+
+.background-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.layer {
+    position: absolute;
+    top: -2.5%;
+    left: -2.5%;
+    width: 105%;
+    height: 105%;
+    overflow: hidden;
+}
+
+.sky {
+    background-image: url('Background/sky.png');
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.rocks {
+    background-image: url('Background/rocks.png');
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.portal-cliff {
+    background-image: url('Background/portal_cliff.png');
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.portal-debris {
+    background-image: url('Background/portal_debris.png');
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.debris {
+    background-image: url('Background/debris.png');
+    -unity-background-scale-mode: scale-and-crop;
+}
+
+.particles-layer {}
+
+.particle {
+    position: absolute;
+    background-image: url('Background/particle.png');
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.8;
+}
+
+.background-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(15, 23, 42, 0.4);
+}
+
+
+.logo-section {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 32px;
+    margin-left: 64px;
+    gap: 8px;
+    opacity: 0;
+}
+
+.logo {
+    width: 72px;
+    height: 72px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.project-title {
+    font-size: var(--font-size-xl);
+    -unity-font-definition: var(--font-bold);
+    -unity-font-style: normal;
+    color: var(--text-color);
+    letter-spacing: 4px;
+}
+
+.project-subtitle {
+    font-size: var(--font-size-xl);
+    -unity-font-definition: var(--font-light);
+    -unity-font-style: normal;
+    color: var(--accent-color);
+    letter-spacing: 4px;
+}
+
+
+.main-menu {
+    justify-content: center;
+    margin-left: 96px;
+}
+
+.menu-btn {
+    width: 320px;
+    height: 52px;
+    background-color: transparent;
+    border-width: 0;
+    margin-bottom: 18px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 48px;
+    transition-property: all;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out-cubic;
+    opacity: 0;
+    position: relative;
+    overflow: visible;
+}
+
+.btn-text {
+    font-size: var(--font-size-lg);
+    color: var(--text-muted);
+    -unity-text-align: middle-left;
+}
+
+.btn-accent {
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 4px;
+    bottom: 0;
+    background-color: var(--primary-color);
+    transform-origin: bottom left;
+    scale: 1 0;
+    transition-property: scale;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.quit-accent {
+    background-color: #ef4444;
+}
+
+.btn-decoration {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    translate: 0 -50%;
+    width: 8px;
+    height: 8px;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 0.3s;
+    overflow: visible;
+}
+
+.dot-core {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+}
+
+.dot-glow {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    left: -10px;
+    top: -10px;
+    border-radius: 50%;
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}
+
+.btn-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: transparent;
+    --border-color: rgba(255, 255, 255, 0.05);
+    --border-top-color: rgba(255, 255, 255, 0.05);
+    --border-right-color: rgba(255, 255, 255, 0.05);
+    --fill-color: rgba(255, 255, 255, 0.001);
+    transition-property: background-color, --border-color, --border-top-color, --border-right-color;
+    transition-duration: 0.3s;
+}
+
+
+.menu-btn:hover {
+    padding-left: 56px;
+}
+
+.menu-btn:hover .btn-bg {
+    --fill-color: rgba(255, 255, 255, 0.03);
+    --border-top-color: rgba(255, 255, 255, 0.3);
+    --border-right-color: rgba(255, 255, 255, 0.3);
+}
+
+.menu-btn:hover .btn-accent {
+    scale: 1 1;
+}
+
+.menu-btn:hover .btn-text {
+    color: var(--text-color);
+}
+
+.menu-btn:hover .btn-decoration {
+    opacity: 1;
+}
+
+.menu-btn:hover .dot-glow {
+    opacity: 1;
+}
+
+
+.quit-btn {
+    margin-top: 16px;
+}
+
+.quit-btn .btn-bg {
+    --border-color: rgba(239, 68, 68, 0.3);
+    --border-top-color: rgba(239, 68, 68, 0.3);
+    --border-right-color: rgba(239, 68, 68, 0.3);
+}
+
+.quit-btn:hover .btn-bg {
+    --border-top-color: #ef4444;
+    --border-right-color: #ef4444;
+}
+
+.quit-btn .dot-core {
+    background-color: #ef4444;
+}
+
+
+.footer-section {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+    opacity: 0;
+}
+
+.version-info {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.social-links {
+    flex-direction: row;
+}
+
+.social-link {
+    background-color: transparent;
+    border-width: 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    margin-left: 24px;
+    transition-property: color;
+    transition-duration: 0.2s;
+}
+
+.social-link:hover {
+    color: var(--accent-color);
+}
